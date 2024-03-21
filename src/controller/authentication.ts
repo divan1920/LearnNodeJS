@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt';
 import { NextFunction, Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
 
@@ -18,7 +19,7 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
         success: false,
         message: 'User not found'
       });
-    } else if (user.password !== value.password) {
+    } else if (!bcrypt.compareSync(value.password, user.password)) {
       res.status(401).send({
         success: false,
         message: 'password is incorrect'
@@ -43,7 +44,11 @@ const signup = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { error, value } = authSchema.validate(req.body);
     if (error) return handleValidationErrors(error);
-    const user = new User({ email: value.email, password: value.password });
+    const hashedPassword = await bcrypt.hash(value.password, 10);
+    const user = new User({
+      email: value.email,
+      password: hashedPassword
+    });
     const userRes = await user.save();
     return res.status(200).send({
       success: true,
